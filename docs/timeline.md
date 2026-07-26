@@ -55,3 +55,25 @@ lighthouse_26
 └── .gitignore
 ---
 
+---
+
+## 🚀 Marco Inicial do Projeto
+
+**Data:** 26/07/2026
+
+O projeto Lighthouse foi oficialmente iniciado como ambiente de preparação para o processo seletivo do Programa Lighthouse.
+
+Primeiras configurações realizadas:
+
+- Estrutura profissional de diretórios criada;
+- Ambiente virtual Python configurado;
+- Dependências registradas;
+- Documentação inicial organizada;
+- Repositório privado criado no GitHub;
+- Controle de versão configurado com Git.
+
+Objetivo:
+
+Registrar toda a evolução técnica do projeto, incluindo aprendizados, desafios encontrados, soluções aplicadas e desenvolvimento das competências necessárias para a área de Dados, IA e Negócios Tech.
+
+---
