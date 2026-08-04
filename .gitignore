@@ -1,8 +1,28 @@
+# Ambiente virtual
 .venv/
 
+# Cache do Python
 __pycache__/
-*.pyc
+*.py[cod]
 
+# Arquivos do Jupyter
 .ipynb_checkpoints/
 
-data/raw/
+# Configurações do VS Code
+.vscode/
+
+# Arquivos temporários
+*.log
+*.tmp
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Dados gerados pelo pipeline
+data/processed/*
+data/analytics/*
+
+# Mantém a estrutura das pastas
+!data/processed/.gitkeep
+!data/analytics/.gitkeep
