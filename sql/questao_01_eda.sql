@@ -32,5 +32,5 @@ SELECT
     AVG(total) AS valor_medio
 
 FROM read_csv_auto(
-    '/mnt/c/Users/LecoOliveira/Downloads/1-lh_nautical_csv/orders.csv'
+    'data/raw/orders.csv'
 );

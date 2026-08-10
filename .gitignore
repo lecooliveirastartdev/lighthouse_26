@@ -26,3 +26,9 @@ data/analytics/*
 # Mantém a estrutura das pastas
 !data/processed/.gitkeep
 !data/analytics/.gitkeep
+
+# Dados brutos fornecidos no desafio LH Nautical
+data/raw/*
+
+# Mantém a estrutura da pasta raw no Git
+!data/raw/.gitkeep
