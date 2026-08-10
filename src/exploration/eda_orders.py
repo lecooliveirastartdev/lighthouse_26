@@ -1,78 +1,81 @@
 """
 eda_orders.py
 
-Análise exploratória da tabela `orders`, para o desafio LH Nautical.
-
-Regra do desafio (importante):
-    - Usar SOMENTE a tabela `orders`.
-    - NÃO limpar, NÃO tratar, NÃO transformar os dados.
-    - Apenas observar, agregar e descrever.
+Análise exploratória da tabela `orders` para o desafio LH Nautical.
+Fase 2: Distribuição por Canais, Atribuição de Vendedores e Estatística Descritiva.
 """
 
 from pathlib import Path
+import numpy as np
 import pandas as pd
 
-# Caminho do arquivo orders.csv no WSL
 ORDERS_PATH = Path(
     "/mnt/c/Users/LecoOliveira/Downloads/1-lh_nautical_csv/orders.csv"
 )
+
 
 def load_orders() -> pd.DataFrame:
     """Carrega a tabela `orders` em seu estado bruto."""
     if not ORDERS_PATH.exists():
         raise FileNotFoundError(f"Arquivo não encontrado: {ORDERS_PATH}")
-
     return pd.read_csv(ORDERS_PATH)
 
-def run_desafio_parte_1_e_2(df: pd.DataFrame) -> None:
-    """
-    Executa a extração das métricas da Parte 1 e Parte 2 do Desafio.
-    """
-    # --- PARTE 1: Visão Geral ---
-    qtd_linhas, qtd_colunas = df.shape
-    
-    # Para encontrar a data mínima e máxima, convertemos a Series temporariamente em datetime.
-    # Isso não altera o dataframe original df.
-    created_at_dt = pd.to_datetime(df['created_at'])
-    data_min = created_at_dt.min()
-    data_max = created_at_dt.max()
 
-    # --- PARTE 2: Análise da Coluna 'total' ---
-    total_min = df['total'].min()
-    total_max = df['total'].max()
-    total_medio = df['total'].mean()
+def run_fase_2_analysis(df: pd.DataFrame) -> None:
+    """Executa a análise de canais, vendedores e estatísticas de dispersão."""
+    print("=" * 65)
+    print("FASE 2 — ANÁLISE DE CANAIS E ATRIBUIÇÃO DE VENDEDORES")
+    print("=" * 65)
 
-    # --- SUPORTE PARTE 3: Checagens de Qualidade/Inconsistência ---
-    nulos_total = df['total'].isnull().sum()
-    nulos_created_at = df['created_at'].isnull().sum()
-    totais_negativos = (df['total'] < 0).sum()
-    totais_zero = (df['total'] == 0).sum()
+    # 1. Distribuição por Canal
+    total_pedidos = len(df)
+    canais = df["channel"].value_counts(dropna=False)
+    canais_pct = df["channel"].value_counts(normalize=True, dropna=False) * 100
 
-    # IMPRESSÃO ORGANIZADA
-    print("=" * 60)
-    print("PARTE 1 — VISÃO GERAL DA TABELA ORDERS")
-    print("=" * 60)
-    print(f"• Quantidade total de linhas:  {qtd_linhas}")
-    print(f"• Quantidade total de colunas: {qtd_colunas}")
-    print(f"• Data mínima (created_at):    {data_min}")
-    print(f"• Data máxima (created_at):    {data_max}")
+    print("• Distribuição de Pedidos por Canal (channel):")
+    for canal, qtd in canais.items():
+        pct = canais_pct[canal]
+        print(f"  - {canal}: {qtd:,} pedidos ({pct:.2f}%)")
 
-    print("\n" + "=" * 60)
-    print("PARTE 2 — ANÁLISE DE VALORES NUMÉRICOS (COLUNA TOTAL)")
-    print("=" * 60)
-    print(f"• Valor mínimo: R$ {total_min:,.2f}")
-    print(f"• Valor máximo: R$ {total_max:,.2f}")
-    print(f"• Valor médio:  R$ {total_medio:,.2f}")
+    # 2. Cruzamento: Canal vs Salesperson Nulo
+    print("\n• Análise de Vendedores Nulos (salesperson_id) por Canal:")
+    df["salesperson_is_null"] = df["salesperson_id"].isnull()
+    cruzamento = pd.crosstab(
+        df["channel"],
+        df["salesperson_is_null"],
+        normalize="index",
+    ) * 100
+    cruzamento.columns = ["Com Vendedor (%)", "Sem Vendedor (Nulo %)"]
+    print(cruzamento.round(2).to_string())
 
-    print("\n" + "=" * 60)
-    print("DADOS AUXILIARES PARA O DIAGNÓSTICO (PARTE 3)")
-    print("=" * 60)
-    print(f"• Val. nulos em 'total':      {nulos_total}")
-    print(f"• Val. nulos em 'created_at': {nulos_created_at}")
-    print(f"• Pedidos com total < 0:      {totais_negativos}")
-    print(f"• Pedidos com total == 0:     {totais_zero}")
-    print("=" * 60)
+    print("\n" + "=" * 65)
+    print("FASE 2 — ESTATÍSTICA DE DISPERSÃO DA COLUNA TOTAL")
+    print("=" * 65)
+
+    # 3. Mediana, Quartis e IQR
+    q1 = df["total"].quantile(0.25)
+    mediana = df["total"].median()
+    q3 = df["total"].quantile(0.75)
+    iqr = q3 - q1
+    std_dev = df["total"].std()
+
+    # Outliers pelo critério do IQR (1.5 * IQR)
+    limite_inferior = q1 - 1.5 * iqr
+    limite_superior = q3 + 1.5 * iqr
+    outliers = df[(df["total"] < limite_inferior) | (df["total"] > limite_superior)]
+    qtd_outliers = len(outliers)
+    pct_outliers = (qtd_outliers / total_pedidos) * 100
+
+    print(f"• Mediana (Q2 - Pedido Central): R$ {mediana:,.2f}")
+    print(f"• Primeiro Quartil (Q1 - 25%):   R$ {q1:,.2f}")
+    print(f"• Terceiro Quartil (Q3 - 75%):   R$ {q3:,.2f}")
+    print(f"• Intervalo Interquartil (IQR):  R$ {iqr:,.2f}")
+    print(f"• Desvio Padrão:                 R$ {std_dev:,.2f}")
+    print(f"• Limite Superior para Outliers: R$ {limite_superior:,.2f}")
+    print(f"• Total de Outliers Identificados: {qtd_outliers:,} ({pct_outliers:.2f}% dos pedidos)")
+    print("=" * 65)
+
 
 if __name__ == "__main__":
     orders_df = load_orders()
-    run_desafio_parte_1_e_2(orders_df)
+    run_fase_2_analysis(orders_df)
