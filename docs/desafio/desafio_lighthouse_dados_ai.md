@@ -310,3 +310,79 @@ Exemplo:
 
 ```bash
 python3 generate_schema.py ./csvs schema.sql
+```
+
+---
+
+# 🗄️ Questão 3 — Carregamento
+
+**Status: Concluída ✅**
+
+## Objetivo
+
+Após a criação do schema PostgreSQL, foi desenvolvido um processo para
+carregar todos os arquivos CSV brutos nas respectivas tabelas do banco de
+dados.
+
+A implementação respeita as premissas da questão, mantendo os dados brutos
+sem remoção de nulos ou correção de caracteres especiais.
+
+---
+
+## Implementação
+
+Foi desenvolvido o script:
+
+`src/load/load_csvs.py`
+
+O script:
+
+- identifica automaticamente todos os arquivos CSV de um diretório;
+- utiliza o nome de cada arquivo para identificar a tabela correspondente;
+- utiliza o cabeçalho do CSV para identificar as colunas;
+- conecta ao PostgreSQL utilizando a biblioteca `psycopg`;
+- insere os registros nas tabelas criadas anteriormente;
+- representa campos vazios como `NULL` no PostgreSQL;
+- recebe as configurações de conexão em tempo de execução.
+
+O diretório dos CSVs, host, porta, banco de dados, usuário e senha são
+informados por argumentos, evitando dependência dos caminhos e configurações
+da máquina utilizada no desenvolvimento.
+
+---
+
+## Resultado do carregamento
+
+A versão final foi executada em um banco PostgreSQL separado para validação:
+
+`lh_nautical_teste`
+
+Resultados:
+
+- **Arquivos CSV processados:** `24`
+- **Tabelas carregadas:** `24`
+- **Total de registros carregados:** `433.424`
+- **Registros em `orders`:** `48.998`
+- **Registros em `order_items`:** `147.320`
+- **Registros em `stock_movements`:** `115.312`
+
+---
+
+## Validação
+
+A carga foi validada diretamente no PostgreSQL.
+
+A conferência final apresentou:
+
+- **Total de tabelas:** `24`
+- **Total de registros:** `433.424`
+- **`orders`:** `48.998`
+- **`order_items`:** `147.320`
+- **`stock_movements`:** `115.312`
+
+Também foi realizada uma comparação entre as quantidades existentes nos
+arquivos CSV e as quantidades carregadas no PostgreSQL, com resultado de
+`24/24` tabelas correspondentes.
+
+Dessa forma, a carga foi considerada reproduzível e consistente com os
+arquivos de origem.
