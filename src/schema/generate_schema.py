@@ -4,14 +4,18 @@ a partir dos arquivos CSV da LH Nautical.
 
 Questão 2 — Schema
 
-Responsabilidades deste módulo:
+Uso:
+    python generate_schema.py <diretorio_dos_csvs> [arquivo_saida]
+
+Exemplo:
+    python generate_schema.py data/raw sql/schema.sql
+
+Responsabilidades:
 - localizar todos os arquivos CSV;
 - identificar tabelas e colunas;
-- analisar os valores de cada coluna;
 - inferir tipos compatíveis com PostgreSQL;
 - aplicar regras semânticas para identificadores;
-- gerar um único arquivo schema.sql com um CREATE TABLE
-  para cada arquivo CSV encontrado.
+- gerar um único arquivo schema.sql.
 
 Importante:
 Este módulo utiliza somente bibliotecas padrão do Python 3,
@@ -19,19 +23,9 @@ conforme exigido pelo desafio.
 """
 
 import csv
+import sys
 from datetime import datetime
 from pathlib import Path
-
-
-# ============================================================
-# CONFIGURAÇÃO
-# ============================================================
-
-CSV_DIRECTORY = Path(
-    "/mnt/c/Users/LecoOliveira/Downloads/1-lh_nautical_csv"
-)
-
-OUTPUT_SQL = Path("sql/schema.sql")
 
 
 # ============================================================
@@ -57,16 +51,6 @@ TEXT_IDENTIFIER_COLUMNS = {
 def find_csv_files(directory: Path) -> list[Path]:
     """
     Localiza todos os arquivos CSV existentes no diretório.
-
-    Parameters
-    ----------
-    directory : Path
-        Diretório onde estão os arquivos CSV.
-
-    Returns
-    -------
-    list[Path]
-        Lista ordenada com os arquivos CSV encontrados.
     """
 
     if not directory.exists():
@@ -74,29 +58,32 @@ def find_csv_files(directory: Path) -> list[Path]:
             f"Diretório não encontrado: {directory}"
         )
 
-    return sorted(directory.glob("*.csv"))
+    if not directory.is_dir():
+        raise NotADirectoryError(
+            f"O caminho informado não é um diretório: {directory}"
+        )
+
+    csv_files = sorted(directory.glob("*.csv"))
+
+    if not csv_files:
+        raise FileNotFoundError(
+            f"Nenhum arquivo CSV encontrado em: {directory}"
+        )
+
+    return csv_files
 
 
 # ============================================================
-# FUNÇÕES AUXILIARES DE DETECÇÃO DE TIPO
+# DETECÇÃO DE TIPOS
 # ============================================================
 
 def is_boolean(value: str) -> bool:
-    """
-    Verifica se o valor pode ser interpretado como booleano.
-    """
-
-    return value.lower() in {
-        "true",
-        "false",
-    }
+    """Verifica se o valor representa um booleano."""
+    return value.lower() in {"true", "false"}
 
 
 def is_integer(value: str) -> bool:
-    """
-    Verifica se o valor pode ser interpretado como inteiro.
-    """
-
+    """Verifica se o valor representa um número inteiro."""
     try:
         int(value)
         return True
@@ -105,10 +92,7 @@ def is_integer(value: str) -> bool:
 
 
 def is_numeric(value: str) -> bool:
-    """
-    Verifica se o valor pode ser interpretado como número decimal.
-    """
-
+    """Verifica se o valor representa um número decimal."""
     try:
         float(value)
         return True
@@ -117,36 +101,25 @@ def is_numeric(value: str) -> bool:
 
 
 def is_date(value: str) -> bool:
-    """
-    Verifica se o valor possui formato de data YYYY-MM-DD.
-    """
-
+    """Verifica se o valor possui formato YYYY-MM-DD."""
     try:
-        datetime.strptime(
-            value,
-            "%Y-%m-%d"
-        )
+        datetime.strptime(value, "%Y-%m-%d")
         return True
     except ValueError:
         return False
 
 
 def is_timestamp(value: str) -> bool:
-    """
-    Verifica se o valor possui formato de data e hora.
-    """
+    """Verifica se o valor possui formato de data e hora."""
 
-    timestamp_formats = [
+    formats = [
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S",
     ]
 
-    for timestamp_format in timestamp_formats:
+    for timestamp_format in formats:
         try:
-            datetime.strptime(
-                value,
-                timestamp_format
-            )
+            datetime.strptime(value, timestamp_format)
             return True
         except ValueError:
             continue
@@ -154,16 +127,9 @@ def is_timestamp(value: str) -> bool:
     return False
 
 
-# ============================================================
-# CLASSIFICAÇÃO DE UM VALOR
-# ============================================================
-
 def detect_value_type(value: str) -> str | None:
     """
     Detecta o tipo PostgreSQL mais provável para um valor.
-
-    Valores vazios são ignorados porque não devem definir
-    o tipo da coluna.
     """
 
     value = value.strip()
@@ -195,11 +161,10 @@ def detect_value_type(value: str) -> str | None:
 
 def merge_types(
     current_type: str | None,
-    new_type: str | None
+    new_type: str | None,
 ) -> str | None:
     """
-    Combina os tipos encontrados em diferentes linhas
-    da mesma coluna.
+    Consolida os tipos encontrados nas linhas de uma coluna.
     """
 
     if new_type is None:
@@ -211,10 +176,7 @@ def merge_types(
     if current_type == new_type:
         return current_type
 
-    numeric_types = {
-        "BIGINT",
-        "NUMERIC",
-    }
+    numeric_types = {"BIGINT", "NUMERIC"}
 
     if (
         current_type in numeric_types
@@ -226,12 +188,13 @@ def merge_types(
 
 
 # ============================================================
-# REGRA SEMÂNTICA PARA IDENTIFICADORES
+# REGRA SEMÂNTICA
 # ============================================================
 
 def is_text_identifier(column_name: str) -> bool:
     """
-    Verifica se a coluna representa um identificador textual.
+    Identifica campos que, mesmo contendo apenas números,
+    devem ser armazenados como texto.
     """
 
     return column_name.lower() in TEXT_IDENTIFIER_COLUMNS
@@ -241,17 +204,15 @@ def is_text_identifier(column_name: str) -> bool:
 # INFERÊNCIA DOS TIPOS DE UMA TABELA
 # ============================================================
 
-def infer_csv_types(
-    file_path: Path
-) -> dict[str, str]:
+def infer_csv_types(file_path: Path) -> dict[str, str]:
     """
-    Analisa as linhas do CSV e infere o tipo de cada coluna.
+    Analisa o CSV e infere o tipo PostgreSQL de cada coluna.
     """
 
     with file_path.open(
         mode="r",
         encoding="utf-8",
-        newline=""
+        newline="",
     ) as csv_file:
 
         reader = csv.DictReader(csv_file)
@@ -270,19 +231,21 @@ def infer_csv_types(
 
             for column, value in row.items():
 
+                if value is None:
+                    continue
+
                 if is_text_identifier(column):
                     inferred_types[column] = "TEXT"
                     continue
 
-                detected_type = detect_value_type(
-                    value
-                )
+                detected_type = detect_value_type(value)
 
                 inferred_types[column] = merge_types(
                     inferred_types[column],
-                    detected_type
+                    detected_type,
                 )
 
+    # Colunas totalmente vazias utilizam TEXT como fallback.
     return {
         column: (
             inferred_type
@@ -299,121 +262,120 @@ def infer_csv_types(
 
 def build_create_table(
     table_name: str,
-    columns: dict[str, str]
+    columns: dict[str, str],
 ) -> str:
     """
     Monta a instrução CREATE TABLE de uma tabela.
-
-    Parameters
-    ----------
-    table_name : str
-        Nome da tabela.
-
-    columns : dict[str, str]
-        Dicionário contendo nome da coluna e tipo PostgreSQL.
-
-    Returns
-    -------
-    str
-        Instrução SQL completa da tabela.
     """
 
-    lines = []
+    column_definitions = [
+        f"    {column_name} {column_type}"
+        for column_name, column_type in columns.items()
+    ]
 
-    lines.append(
-        f"CREATE TABLE {table_name} ("
+    return (
+        f"CREATE TABLE {table_name} (\n"
+        + ",\n".join(column_definitions)
+        + "\n);"
     )
-
-    column_definitions = []
-
-    for column_name, column_type in columns.items():
-        column_definitions.append(
-            f"    {column_name} {column_type}"
-        )
-
-    lines.append(
-        ",\n".join(column_definitions)
-    )
-
-    lines.append(");")
-
-    return "\n".join(lines)
 
 
 # ============================================================
-# GERAÇÃO DO ARQUIVO schema.sql
+# GERAÇÃO DO schema.sql
 # ============================================================
 
 def generate_schema(
-    csv_files: list[Path],
-    output_path: Path
-) -> None:
+    csv_directory: Path,
+    output_path: Path,
+) -> int:
     """
-    Gera um único arquivo schema.sql com todos os CREATE TABLE.
+    Gera o schema SQL para todos os CSVs encontrados.
 
-    Parameters
-    ----------
-    csv_files : list[Path]
-        Lista dos CSVs que serão processados.
-
-    output_path : Path
-        Caminho do arquivo SQL de saída.
+    Returns
+    -------
+    int
+        Quantidade de tabelas geradas.
     """
 
-    # Garante que a pasta sql exista.
+    csv_files = find_csv_files(csv_directory)
+
     output_path.parent.mkdir(
         parents=True,
-        exist_ok=True
+        exist_ok=True,
     )
 
     create_statements = []
 
     for csv_file in csv_files:
 
-        # O nome do CSV sem extensão vira o nome da tabela.
         table_name = csv_file.stem
 
-        # Infere os tipos das colunas.
-        inferred_types = infer_csv_types(
-            csv_file
-        )
-
-        # Monta o CREATE TABLE.
-        create_table_sql = build_create_table(
-            table_name,
-            inferred_types
-        )
+        inferred_types = infer_csv_types(csv_file)
 
         create_statements.append(
-            create_table_sql
+            build_create_table(
+                table_name,
+                inferred_types,
+            )
         )
 
-    # Cabeçalho informativo do arquivo.
     header = """\
 -- ============================================================
 -- Desafio Lighthouse — Dados & IA
 -- Questão 2 — Schema PostgreSQL
 --
--- Arquivo gerado automaticamente por:
--- src/schema/generate_schema.py
---
--- Cada arquivo CSV de origem gera uma tabela PostgreSQL.
+-- Arquivo gerado automaticamente por generate_schema.py
 -- ============================================================
 
 """
 
-    # Separa cada CREATE TABLE por duas quebras de linha.
     schema_content = (
         header
         + "\n\n".join(create_statements)
         + "\n"
     )
 
-    # Salva o arquivo final.
     output_path.write_text(
         schema_content,
-        encoding="utf-8"
+        encoding="utf-8",
     )
+
+    return len(csv_files)
+
+
+# ============================================================
+# ARGUMENTOS DA LINHA DE COMANDO
+# ============================================================
+
+def parse_arguments() -> tuple[Path, Path]:
+    """
+    Obtém os caminhos informados na linha de comando.
+
+    Argumento 1:
+        diretório contendo os CSVs.
+
+    Argumento 2 (opcional):
+        arquivo SQL de saída.
+
+    Se o segundo argumento não for informado,
+    utiliza schema.sql no diretório atual.
+    """
+
+    if len(sys.argv) < 2:
+        print(
+            "Uso: python generate_schema.py "
+            "<diretorio_dos_csvs> [arquivo_saida]"
+        )
+        sys.exit(1)
+
+    csv_directory = Path(sys.argv[1])
+
+    if len(sys.argv) >= 3:
+        output_path = Path(sys.argv[2])
+    else:
+        output_path = Path("schema.sql")
+
+    return csv_directory, output_path
 
 
 # ============================================================
@@ -422,35 +384,37 @@ def generate_schema(
 
 def main() -> None:
     """
-    Executa todo o processo de geração do schema PostgreSQL.
+    Executa o processo completo de geração do schema.
     """
 
-    csv_files = find_csv_files(
-        CSV_DIRECTORY
-    )
+    csv_directory, output_path = parse_arguments()
 
     print("=" * 70)
     print("QUESTÃO 2 — GERAÇÃO DO SCHEMA POSTGRESQL")
     print("=" * 70)
 
-    print(
-        f"\nArquivos CSV encontrados: "
-        f"{len(csv_files)}"
-    )
+    try:
+        table_count = generate_schema(
+            csv_directory,
+            output_path,
+        )
 
-    generate_schema(
-        csv_files,
-        OUTPUT_SQL
-    )
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+        ValueError,
+    ) as error:
+        print(f"\nErro: {error}")
+        sys.exit(1)
 
     print(
-        f"\nSchema gerado com sucesso: "
-        f"{OUTPUT_SQL}"
+        f"\nDiretório de origem: {csv_directory}"
     )
-
     print(
-        f"Tabelas geradas: "
-        f"{len(csv_files)}"
+        f"Schema gerado com sucesso: {output_path}"
+    )
+    print(
+        f"Tabelas geradas: {table_count}"
     )
 
 

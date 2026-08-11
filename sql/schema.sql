@@ -2,10 +2,7 @@
 -- Desafio Lighthouse — Dados & IA
 -- Questão 2 — Schema PostgreSQL
 --
--- Arquivo gerado automaticamente por:
--- src/schema/generate_schema.py
---
--- Cada arquivo CSV de origem gera uma tabela PostgreSQL.
+-- Arquivo gerado automaticamente por generate_schema.py
 -- ============================================================
 
 CREATE TABLE addresses (
