@@ -2,8 +2,8 @@
 
 **Candidato / Responsável:** Leco Oliveira  
 **Projeto:** Lighthouse '26 (`lighthouse_26`)  
-**Escopo:** Análise Exploratória, Diagnóstico e Pipeline de Dados  
-**Data da Análise:** Agosto de 2026  
+**Escopo:** Análise Exploratória, Engenharia e Pipeline de Dados  
+**Data da Análise:** Agosto de 2026
 
 ---
 
@@ -14,20 +14,24 @@ desenvolvidas durante o desafio de Dados & IA da LH Nautical.
 
 O objetivo é manter a rastreabilidade do raciocínio utilizado ao longo do
 desafio, desde a análise dos dados brutos até as etapas posteriores de
-tratamento, análise e modelagem.
+tratamento, estruturação, análise e modelagem.
 
 ### Diretrizes adotadas no projeto
 
 1. **Preservação dos dados brutos:** os arquivos originais não são alterados.
 2. **Rastreabilidade:** transformações são realizadas por scripts versionados.
-3. **Separação de responsabilidades:** exploração, transformação e demais
-   etapas possuem módulos próprios.
+3. **Separação de responsabilidades:** exploração, transformação, geração de
+   schema e demais etapas possuem módulos próprios.
 4. **Decisões baseadas em evidências:** hipóteses de negócio são diferenciadas
    de conclusões efetivamente sustentadas pelos dados.
+5. **Reprodutibilidade:** as soluções devem poder ser executadas novamente
+   sem depender de configurações específicas da máquina de desenvolvimento.
 
 ---
 
 # 📊 Questão 1 — EDA
+
+**Status: Concluída ✅**
 
 ## Cenário
 
@@ -109,6 +113,10 @@ Dessa forma, considero a tabela adequada para exploração inicial, porém não
 completamente pronta para análises posteriores sem uma etapa prévia de
 avaliação e tratamento dos pontos identificados.
 
+### Arquivo da solução
+
+- `sql/questao_01_eda.sql`
+
 ---
 
 # ⚙️ Camada de Processamento — `data/processed/`
@@ -176,26 +184,129 @@ original e reproduzir as transformações realizadas pelo pipeline.
 
 ---
 
-# 🗺️ Status do Desafio
+# 🗄️ Questão 2 — Schema PostgreSQL
 
-- [x] **Questão 1:** EDA da tabela `orders`
-- [x] **Profiling inicial**
-- [x] **Diagnóstico estatístico complementar**
-- [x] **Construção inicial da camada `processed`**
-- [ ] **Questão 2:** Aguardando análise
-- [ ] **Demais questões:** Pendentes
+**Status: Concluída ✅**
+
+## Cenário
+
+Como o ERP não permite conexão direta com seu banco de dados, os arquivos
+CSV fornecidos são considerados as fontes disponíveis para construção da
+estrutura do banco de destino.
+
+O objetivo da questão foi desenvolver um script em Python 3 capaz de
+identificar automaticamente as colunas presentes nos CSVs e gerar um único
+arquivo `schema.sql` contendo as instruções de criação das tabelas para
+PostgreSQL.
+
+A solução foi desenvolvida utilizando somente bibliotecas padrão do Python 3,
+conforme exigido pelo desafio.
 
 ---
 
-# 📝 Observações Técnicas
+## 2.1 Detecção dos arquivos e colunas
 
-As análises complementares realizadas durante o desenvolvimento podem
-ultrapassar o mínimo solicitado por determinadas questões.
+O script identifica automaticamente todos os arquivos `.csv` existentes no
+diretório informado.
 
-Quando isso ocorrer, os resultados adicionais serão utilizados como apoio ao
-raciocínio, mantendo separadas:
+Resultado:
 
-- as informações explicitamente solicitadas pelo desafio;
-- as análises exploratórias complementares;
-- as hipóteses de negócio;
-- e as conclusões efetivamente sustentadas pelos dados.
+- **Arquivos CSV encontrados:** `24`
+- **Tabelas identificadas:** `24`
+
+O cabeçalho de cada CSV é utilizado para determinar o nome das colunas de
+cada tabela.
+
+---
+
+## 2.2 Inferência dos tipos PostgreSQL
+
+Os valores presentes nas colunas são analisados para determinar tipos
+compatíveis com PostgreSQL.
+
+Entre os tipos utilizados estão:
+
+- `BIGINT`
+- `NUMERIC`
+- `BOOLEAN`
+- `DATE`
+- `TIMESTAMP`
+- `TEXT`
+
+Valores vazios são ignorados durante a análise para que não determinem
+incorretamente o tipo da coluna.
+
+Quando uma coluna não possui valores suficientes para inferência, `TEXT` é
+utilizado como fallback seguro.
+
+---
+
+## 2.3 Tratamento de identificadores
+
+Durante a validação foi identificado que alguns campos podem possuir somente
+dígitos sem representarem valores destinados a operações matemáticas.
+
+Entre os exemplos estão:
+
+- CPF
+- `tax_id`
+- telefone
+- CEP
+- código de barras (`barcode_ean`)
+- chave de NF-e (`nfe_access_key`)
+- código NCM (`ncm_code`)
+- inscrição estadual
+
+Esses campos são tratados como `TEXT`, evitando perda de zeros à esquerda ou
+interpretação inadequada como valores numéricos.
+
+---
+
+## 2.4 Coluna `reorder_point`
+
+Durante a validação da tabela `stock_levels`, foi identificado que a coluna
+`reorder_point` não possui valores preenchidos.
+
+Resultado da verificação:
+
+- **Total de registros:** `6.054`
+- **Valores vazios:** `6.054`
+- **Valores preenchidos:** `0`
+
+Como não existem valores disponíveis para determinar seu tipo, a solução
+utiliza `TEXT` como fallback.
+
+Essa decisão evita assumir um tipo sem evidência disponível nos dados.
+
+---
+
+## 2.5 Geração do `schema.sql`
+
+Após a inferência das colunas e seus respectivos tipos, o script gera
+automaticamente uma instrução `CREATE TABLE` para cada arquivo CSV.
+
+Todas as instruções são reunidas em um único arquivo:
+
+`sql/schema.sql`
+
+Resultado:
+
+- **Arquivos CSV processados:** `24`
+- **Instruções `CREATE TABLE` geradas:** `24`
+
+---
+
+## 2.6 Portabilidade e validação
+
+Inicialmente, o script utilizava um caminho específico da máquina de
+desenvolvimento para localizar os CSVs.
+
+Antes da entrega, essa dependência foi removida.
+
+A versão final recebe o diretório contendo os arquivos CSV como argumento,
+permitindo sua execução em diferentes ambientes.
+
+Exemplo:
+
+```bash
+python3 generate_schema.py ./csvs schema.sql
