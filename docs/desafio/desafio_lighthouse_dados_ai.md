@@ -707,4 +707,93 @@ python questao_06_baseline.py \
 - [x] **Questão 4 — Análise de clientes**
 - [x] **Questão 5 — Dimensão de calendário**
 - [x] **Questão 6 — Previsão de demanda**
-- [ ] **Próximas questões — Pendentes**
+---
+
+# Questão 7 — Sistema de recomendação
+
+## Objetivo
+
+Construir um sistema de recomendação baseado na similaridade do comportamento
+de compra dos clientes, identificando os produtos mais similares ao
+**Motor de Popa 1949**.
+
+## Construção da matriz de interação
+
+Foi construída uma matriz binária **Cliente × Produto**, em que:
+
+- as linhas representam os clientes (`customer_id`);
+- as colunas representam os produtos (`product_id`);
+- o valor `1` indica que o cliente comprou o produto ao menos uma vez;
+- o valor `0` indica ausência de compra;
+- a quantidade adquirida foi desconsiderada.
+
+As interações foram obtidas a partir das tabelas de pedidos, itens dos pedidos
+e variantes de produtos.
+
+A base utilizada apresentou:
+
+- **2.000 clientes**;
+- **500 produtos**;
+- **135.508 interações únicas Cliente × Produto**;
+- **397 clientes** que compraram o Motor de Popa 1949.
+
+## Similaridade de cosseno
+
+A similaridade entre produtos foi calculada utilizando **Cosine Similarity**
+sobre os vetores binários de interação dos clientes.
+
+Nesse contexto, quanto maior a similaridade de cosseno entre dois produtos,
+maior a semelhança entre os grupos de clientes que compraram esses itens.
+
+O produto de referência utilizado foi:
+
+- **Motor de Popa 1949**
+- `product_id = 180`
+
+## Ranking dos produtos mais similares
+
+Os cinco produtos mais similares ao Motor de Popa 1949 foram:
+
+1. **Motor de Popa 5331** — similaridade `0,2566`
+2. **Cabo Náutico 2105** — similaridade `0,2562`
+3. **Vela Mestra 1913** — similaridade `0,2558`
+4. **Cabo Náutico 9048** — similaridade `0,2393`
+5. **GPS Plotter 6249** — similaridade `0,2377`
+
+O próprio Motor de Popa 1949 foi removido do ranking.
+
+## Limitação
+
+Uma limitação desse método é considerar apenas a presença ou ausência da
+compra. Informações como quantidade, frequência, recência, avaliação e
+sequência temporal das compras não são consideradas.
+
+Além disso, produtos com poucas interações podem apresentar menor qualidade
+de recomendação devido à falta de histórico suficiente.
+
+## Arquivos
+
+- `questao_07_interacoes.sql` — extração das interações únicas Cliente × Produto;
+- `questao_07_recomendacao.py` — construção da matriz, cálculo da similaridade
+  de cosseno e geração do ranking.
+
+## Resultado final
+
+Produto com maior similaridade ao **Motor de Popa 1949**:
+
+**Motor de Popa 5331 — similaridade 0,2566**
+
+---
+
+## Status atual
+
+- [x] **Questão 1 — EDA**
+- [x] **Questão 2 — Schema PostgreSQL**
+- [x] **Questão 3 — Carregamento**
+- [x] **Questão 4 — Análise de clientes**
+- [x] **Questão 5 — Dimensão de calendário**
+- [x] **Questão 6 — Previsão de demanda**
+- [x] **Questão 7 — Sistema de recomendação**
+- [x] **Dashboard complementar — Power BI**
+
+**Desafio Lighthouse concluído.**
