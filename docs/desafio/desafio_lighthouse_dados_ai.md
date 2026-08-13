@@ -413,10 +413,123 @@ anteriores do desafio.
 
 ---
 
+## Questão 5 — Dimensão de calendário
+
+### Objetivo
+
+A análise teve como objetivo identificar o dia da semana com a menor média
+de vendas nas lojas físicas, considerando também os dias em que a loja
+esteve aberta, mas não registrou nenhuma venda.
+
+Agrupar diretamente a tabela `orders` poderia produzir uma média incorreta,
+pois os dias sem registros de venda não estariam presentes no cálculo.
+
+---
+
+### Construção da dimensão de calendário
+
+Foi criada uma dimensão de datas em SQL contendo todos os dias do período
+de análise.
+
+O calendário foi relacionado às vendas diárias utilizando `LEFT JOIN`,
+garantindo a permanência dos dias sem registros na tabela `orders`.
+
+Os valores ausentes foram convertidos para zero utilizando `COALESCE`.
+
+A análise considerou somente as vendas realizadas em lojas físicas:
+
+```sql
+WHERE channel = 'pos'
+```
+
+Os nomes dos dias da semana foram apresentados em português.
+
+---
+
+### Lógica utilizada
+
+O processo foi realizado nas seguintes etapas:
+
+1. identificação da menor data existente em `orders`;
+2. geração de todas as datas entre a data inicial e a data atual;
+3. seleção apenas das vendas de lojas físicas (`channel = 'pos'`);
+4. agregação das vendas por dia utilizando `SUM(total)`;
+5. relacionamento entre calendário e vendas utilizando `LEFT JOIN`;
+6. substituição dos dias sem vendas por zero utilizando `COALESCE`;
+7. cálculo da média das vendas diárias para cada dia da semana.
+
+---
+
+### Resultado
+
+As médias obtidas foram:
+
+| Dia da semana | Média de vendas |
+|---|---:|
+| Quinta-feira | R$ 151.027,72 |
+| Segunda-feira | R$ 151.858,64 |
+| Domingo | R$ 154.408,52 |
+| Sábado | R$ 159.288,41 |
+| Terça-feira | R$ 159.999,97 |
+| Sexta-feira | R$ 163.625,58 |
+| Quarta-feira | R$ 169.054,47 |
+
+A **Quinta-feira** apresentou a menor média de vendas nas lojas físicas,
+com **R$ 151.027,72**.
+
+---
+
+### Validação dos dias sem venda
+
+Foi realizada uma consulta complementar para verificar quantos dias do
+calendário não apresentaram vendas.
+
+| Dia da semana | Dias no calendário | Dias sem venda | Média de vendas |
+|---|---:|---:|---:|
+| Quinta-feira | 346 | 20 | R$ 151.027,72 |
+| Segunda-feira | 345 | 7 | R$ 151.858,64 |
+| Domingo | 345 | 12 | R$ 154.408,52 |
+| Sábado | 345 | 10 | R$ 159.288,41 |
+| Terça-feira | 345 | 8 | R$ 159.999,97 |
+| Sexta-feira | 345 | 10 | R$ 163.625,58 |
+| Quarta-feira | 346 | 9 | R$ 169.054,47 |
+
+A validação confirmou que os dias sem vendas foram preservados pela dimensão
+de calendário e considerados com valor zero no cálculo da média.
+
+Esse tratamento evita que a média seja artificialmente elevada pela exclusão
+dos dias em que a loja esteve aberta, mas não realizou vendas.
+
+---
+
+### Portabilidade
+
+Os arquivos SQL não possuem caminhos locais, nome de banco, usuário, senha
+ou outras configurações específicas do ambiente de desenvolvimento.
+
+As versões copiadas para a pasta final de entrega também foram executadas
+diretamente e retornaram os mesmos resultados, confirmando que as consultas
+não dependem da localização original dentro do projeto.
+
+---
+
+### Arquivos
+
+- `questao_05_calendario.sql` — solução principal da Questão 5;
+- `questao_05_validacao.sql` — validação complementar dos dias sem venda.
+
+### Evidência complementar
+
+- `questao_05_validacao_calendario.png` — resultado da validação executada
+  no PostgreSQL.
+
+---
+
 ## Status atual
 
 - [x] **Questão 1 — EDA**
 - [x] **Questão 2 — Schema PostgreSQL**
 - [x] **Questão 3 — Carregamento**
 - [x] **Questão 4 — Análise de clientes**
+- [x] **Questão 5 — Dimensão de calendário**
 - [ ] **Próximas questões — Pendentes**
