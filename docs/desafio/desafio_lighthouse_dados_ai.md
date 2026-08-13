@@ -525,6 +525,180 @@ não dependem da localização original dentro do projeto.
 
 ---
 
+## Questão 6 — Previsão de demanda
+
+### Objetivo
+
+O objetivo foi construir um baseline simples para prever a demanda mensal do
+produto `Bússola de Bordo 702` no primeiro trimestre de 2026.
+
+O período de treino considerou os dados disponíveis até **31/12/2025** e o
+período de teste correspondeu aos meses de **janeiro, fevereiro e março de
+2026**.
+
+---
+
+### Preparação dos dados
+
+Para construir a série de vendas do produto, foram relacionadas as tabelas:
+
+- `products`;
+- `product_variants`;
+- `order_items`;
+- `orders`.
+
+Durante a análise foi identificado que o nome `Bússola de Bordo 702` aparece
+em dois registros da tabela `products`:
+
+- `product_id = 74`;
+- `product_id = 240`.
+
+Os dois produtos possuem vendas e, juntos, possuem três variantes:
+
+- `variant_id = 147`;
+- `variant_id = 148`;
+- `variant_id = 486`.
+
+Como o enunciado identifica o produto pelo nome, foram consideradas as vendas
+das três variantes associadas aos registros com esse nome.
+
+As quantidades vendidas foram agregadas em base mensal, formando a série
+utilizada pelo modelo.
+
+---
+
+### Baseline
+
+O baseline foi construído utilizando uma **média móvel dos últimos 3 meses**.
+
+Para cada mês previsto, foram utilizadas somente as vendas dos três meses
+imediatamente anteriores.
+
+Exemplo para janeiro de 2026:
+
+```text
+Outubro/2025  = 34 unidades
+Novembro/2025 = 60 unidades
+Dezembro/2025 = 22 unidades
+
+Previsão Jan/2026
+= (34 + 60 + 22) / 3
+= 38,67 unidades
+```
+
+A mesma lógica foi aplicada aos demais meses do período de teste.
+
+---
+
+### Previsões
+
+Os resultados obtidos foram:
+
+| Mês | Venda real | Previsão | Erro absoluto |
+|---|---:|---:|---:|
+| Janeiro/2026 | 79 | 38,67 | 40,33 |
+| Fevereiro/2026 | 68 | 53,67 | 14,33 |
+| Março/2026 | 60 | 56,33 | 3,67 |
+
+A soma das previsões para o primeiro trimestre foi:
+
+```text
+38,67 + 53,67 + 56,33 = 148,67
+```
+
+Arredondando o resultado final, a previsão total para o primeiro trimestre
+de 2026 foi de **149 unidades**.
+
+---
+
+### Avaliação — MAE
+
+Para avaliar o baseline foi utilizada a métrica **MAE (Mean Absolute Error)**.
+
+O erro absoluto foi calculado para cada mês e posteriormente foi obtida a
+média desses erros.
+
+Resultado:
+
+**MAE = 19,44 unidades**
+
+Isso significa que, durante o período de teste, as previsões apresentaram um
+erro absoluto médio de aproximadamente 19,44 unidades em relação às vendas
+reais.
+
+---
+
+### Data leakage
+
+O data leakage foi evitado garantindo que cada previsão utilizasse somente
+informações disponíveis antes do mês previsto.
+
+Dessa forma:
+
+- janeiro de 2026 utilizou outubro, novembro e dezembro de 2025;
+- fevereiro de 2026 utilizou novembro e dezembro de 2025 e janeiro de 2026;
+- março de 2026 utilizou dezembro de 2025 e janeiro e fevereiro de 2026.
+
+Os valores reais do período de teste foram utilizados posteriormente apenas
+para avaliar as previsões e calcular o MAE.
+
+---
+
+### Avaliação do baseline
+
+O baseline pode ser utilizado como uma referência inicial, porém apresentou
+uma diferença relevante em janeiro de 2026, quando foram previstas 38,67
+unidades e ocorreram 79 vendas.
+
+Uma limitação da média móvel de 3 meses é considerar apenas o comportamento
+recente das vendas.
+
+O método não representa diretamente fatores como sazonalidade, tendência,
+promoções ou outras mudanças que possam influenciar a demanda.
+
+Por isso, o baseline é útil como ponto inicial de comparação, mas pode ser
+melhorado com modelos capazes de representar melhor o comportamento temporal
+das vendas.
+
+---
+
+### Portabilidade
+
+O script Python recebe as configurações de conexão com o PostgreSQL por
+argumentos de linha de comando, sem manter host, porta, banco, usuário ou
+senha fixos no código.
+
+A versão final também foi executada fora da pasta original do projeto,
+mantendo os mesmos resultados.
+
+Exemplo de execução:
+
+```bash
+python questao_06_baseline.py \
+    <host> \
+    <porta> \
+    <banco> \
+    <usuario> \
+    <senha>
+```
+
+---
+
+### Arquivos
+
+- `questao_06_dataset.sql` — construção da série mensal de vendas;
+- `questao_06_baseline.py` — baseline de média móvel, previsões e cálculo do MAE.
+
+### Resultado final
+
+- Previsão janeiro/2026: **38,67 unidades**
+- Previsão fevereiro/2026: **53,67 unidades**
+- Previsão março/2026: **56,33 unidades**
+- Previsão total do trimestre: **149 unidades**
+- MAE: **19,44 unidades**
+
+---
+
 ## Status atual
 
 - [x] **Questão 1 — EDA**
@@ -532,4 +706,5 @@ não dependem da localização original dentro do projeto.
 - [x] **Questão 3 — Carregamento**
 - [x] **Questão 4 — Análise de clientes**
 - [x] **Questão 5 — Dimensão de calendário**
+- [x] **Questão 6 — Previsão de demanda**
 - [ ] **Próximas questões — Pendentes**
